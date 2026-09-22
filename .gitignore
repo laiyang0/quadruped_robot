@@ -44,6 +44,7 @@ build/
 Build/
 build-*/
 
+
 # CMake generated files
 CMakeFiles/
 CMakeCache.txt
@@ -67,3 +68,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+test/
+
+# ros build output
+install
+log

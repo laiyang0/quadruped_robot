@@ -1,0 +1,9 @@
+<library path="quadruped_robot_controller">
+    <class name="quadruped_robot_controller/QuadrupedRobotController"
+           type="quadruped_robot_controller::QuadrupedRobotController"
+           base_class_type="controller_interface::ControllerInterface">
+        <description>
+            Quadruped robot controller
+        </description>
+    </class>
+</library>

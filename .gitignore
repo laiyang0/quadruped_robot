@@ -68,8 +68,12 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
-test/
+test
 
 # ros build output
 install
 log
+
+参数记录.md
+实现过程学习记录.md
+算法学习记录.md

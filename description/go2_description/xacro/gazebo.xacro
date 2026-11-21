@@ -167,7 +167,17 @@
     </plugin>
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
     <plugin filename="gz-sim-forcetorque-system" name="gz::sim::systems::ForceTorque"/>
+    <!--调用这个插件后,gazebo会开始发送pose数据,但是ros2中还不能直接订阅这个数据,因为接口不同-->
+    <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">  
+      <use_pose_vector_msg>false</use_pose_vector_msg>
+      <publish_link_pose>false</publish_link_pose>
+      <!--这个打开只发送机器人的位置-->
+      <publish_model_pose>true</publish_model_pose>   
+      <static_publisher>false</static_publisher>
+      <update_frequency>100</update_frequency>
+    </plugin>
   </gazebo>
+
 
   <gazebo reference="trunk">
     <mu1>0.6</mu1>

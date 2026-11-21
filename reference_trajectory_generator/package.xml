@@ -1,14 +1,13 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>masscenter_des</name>
+  <name>reference_trajectory_generator</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="laiyang@todo.todo">laiyang</maintainer>
+  <maintainer email="2736643761@qq.com">laiyang</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>

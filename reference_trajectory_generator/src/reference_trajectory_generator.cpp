@@ -1,22 +1,21 @@
-#include "masscenter_des/masscenter_des.hpp"
+#include "reference_trajectory_generator/reference_trajectory_generator.hpp"
 
-
-MasscenterDes::MasscenterDes(): rclcpp::Node("masscenter_des_node")
+ReferenceTrajectoryGenerator::ReferenceTrajectoryGenerator(): rclcpp::Node("reference_trajectory_generator")
 {
-    RCLCPP_INFO(this->get_logger(), "MasscenterDes node has been started.");
-    keyboard_sub_=this->create_subscription<std_msgs::msg::String>("keyboard_input",10,std::bind(&MasscenterDes::sub_callback,this,std::placeholders::_1));
-    path_pub_=this->create_publisher<nav_msgs::msg::Path>("masscenter_des_path",10);
-    timer_=this->create_timer(std::chrono::milliseconds(long(t*1000)), std::bind(&MasscenterDes::timer_callback,this));
+    RCLCPP_INFO(this->get_logger(), "ReferenceTrajectoryGenerator node has been started.");
+    keyboard_sub_=this->create_subscription<std_msgs::msg::String>("keyboard_input",10,std::bind(&ReferenceTrajectoryGenerator::sub_callback,this,std::placeholders::_1));
+    trajector_pub_=this->create_publisher<nav_msgs::msg::Path>("reference_trajectory",10);
+    timer_=this->create_timer(std::chrono::milliseconds(long(dt*1000)), std::bind(&ReferenceTrajectoryGenerator::timer_callback,this));
     path_msg.header.stamp = this->get_clock()->now();
     path_msg.header.frame_id = "map";
-    angle_w[2]=angle_z_init;    //当前b与o的初始偏航角
-    pos_w[2]=pos_z_init;        //当前b与o的初始期望高度
+    angle_w[2]=init_yaw;                //当前b与o的初始偏航角
+    pos_w[2]=init_center_height;        //当前b与o的初始期望高度
 }
-MasscenterDes::~MasscenterDes()
+ReferenceTrajectoryGenerator::~ReferenceTrajectoryGenerator()
 {
-    RCLCPP_INFO(this->get_logger(), "MasscenterDes node has been stopped.");
+    RCLCPP_INFO(this->get_logger(), "ReferenceTrajectoryGenerator node has been stopped.");
 }
-void MasscenterDes::timer_callback()
+void ReferenceTrajectoryGenerator::timer_callback()
 {   
     static int count=0;
     count++;
@@ -29,15 +28,15 @@ void MasscenterDes::timer_callback()
     }
     /********计算质心轨迹*********/
     w_w=w_b;    //当前world系下的角速度
-    angle_w[2]=angle_w[2]+w_w[2]*t;   //计算当前b与o的偏航角
+    angle_w[2]=angle_w[2]+w_w[2]*dt;   //计算当前b与o的偏航角
     Eigen::Matrix3d R;
     R<<cos(angle_w[2]),-sin(angle_w[2]),0,
        sin(angle_w[2]),cos(angle_w[2]),0,
        0,0,1;    //旋转矩阵
     vel_w=R*vel_b;   //当前world系下的质心速度
 
-    pos_w=pos_w+vel_w*t;   //当前world系下的质心位置
-    angle_w=angle_w+w_w*t;   //当前world系下的质心角度
+    pos_w=pos_w+vel_w*dt;   //当前world系下的质心位置
+    angle_w=angle_w+w_w*dt;   //当前world系下的质心角度
     /********计算期望质心轨迹*********/
     /********发布期望质心轨迹*********/
     Eigen::Quaterniond q(Eigen::AngleAxisd(angle_w[2], Eigen::Vector3d::UnitZ()));//将欧拉角转换为四元数
@@ -51,11 +50,11 @@ void MasscenterDes::timer_callback()
     pose_msg.pose.orientation.z = q.z();
     pose_msg.pose.orientation.w = q.w();
     path_msg.poses.push_back(pose_msg);
-    path_pub_->publish(path_msg);
+    trajector_pub_->publish(path_msg);
     /********发布期望质心轨迹*********/
 
 }
-void MasscenterDes::sub_callback(std_msgs::msg::String::SharedPtr msg)
+void ReferenceTrajectoryGenerator::sub_callback(std_msgs::msg::String::SharedPtr msg)
 {
     switch(msg->data.c_str()[0])
     {
@@ -90,8 +89,8 @@ void MasscenterDes::sub_callback(std_msgs::msg::String::SharedPtr msg)
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto masscenter_des_node=std::make_shared<MasscenterDes>();
-    rclcpp::spin(masscenter_des_node);
+    auto reference_trajectory_generator_node=std::make_shared<ReferenceTrajectoryGenerator>();
+    rclcpp::spin(reference_trajectory_generator_node);
     rclcpp::shutdown();
     return 0;
 }

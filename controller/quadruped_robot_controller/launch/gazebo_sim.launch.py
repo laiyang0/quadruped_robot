@@ -10,7 +10,8 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.actions import TimerAction
-
+def print_red(text):
+    print(f"\033[31m{text}\033[0m")
 # 运行阶段
 def launch_setup(context, *args, **kwargs):
     package_description = context.launch_configurations['pkg_description']  #获取package_description
@@ -20,13 +21,15 @@ def launch_setup(context, *args, **kwargs):
     controllers_yaml_path = os.path.join(get_package_share_directory(package_description),'config','robot_control.yaml')
 
     xacro_file = os.path.join(pkg_path, 'xacro', 'robot.xacro')
-    urdf_path=xacro.process_file(xacro_file, mappings={'DEBUG': 'true','GAZEBO': 'true'}).toxml()
-    
-    print(f"Package description: {package_description}")
-    print(f"Init height: {init_height}")
-    print(f"pkg_path: {pkg_path}")
-    print(f"controllers_yaml_path:{controllers_yaml_path}")
+    urdf_path=xacro.process_file(xacro_file, mappings={'DEBUG': 'false','GAZEBO': 'true'}).toxml()
 
+    world_path="/home/laiyang/quadruped_robot/world/empty.sdf"
+    
+    print_red(f"Package description: {package_description}")
+    print_red(f"Init height: {init_height}")
+    print_red(f"pkg_path: {pkg_path}")
+    print_red(f"controllers_yaml_path:{controllers_yaml_path}")
+    print_red(f"world_path:{world_path}")
     rviz_config_file = os.path.join(get_package_share_directory(package_description), "config", "visualize_urdf.rviz")
 
     rviz2 = Node(
@@ -57,20 +60,25 @@ def launch_setup(context, *args, **kwargs):
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
         ]),
-        launch_arguments={'gz_args': '-r empty.sdf'}.items()  # -r 表示启动后立即运行
+        launch_arguments={'gz_args': f'-r {world_path}'}.items()  # -r 表示启动后立即运行
     )
     #gazebo_harmonic通过接收robot_state_publisher发布的"/robot_description"生成模型
+    # 相当于在这里生成了仿真环境下的机器人模型
     gz_spawn_entity = Node(
         package='ros_gz_sim',
         executable='create',
         output='screen',
-        arguments=['-topic', 'robot_description', '-name',
-                   'robot', '-allow_renaming', 'true', '-z', '0.4'],
+        arguments=['-name','quadruped_robot',
+                    '-topic', 'robot_description',
+                    # '-file', urdf_path, # 你的 URDF 绝对路径
+                   'robot', '-allow_renaming', 'true', '-x',"0.0" ,'-y',"0.0",'-z', '0.4'], #设置机器人的初始坐标
     )
     ros_gz_bridge=Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
-            arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
+            arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+                    '/model/quadruped_robot/pose@geometry_msgs/msg/PoseStamped[gz.msgs.Pose',],
+                        # '/model/quadruped_robot/link/base/pose@geometry_msgs/msg/PoseStamped@gz.msgs.Pose'],
             output='screen'
         )
 
@@ -104,16 +112,36 @@ def launch_setup(context, *args, **kwargs):
         arguments=["quadruped_robot_controller", "--controller-manager", "/controller_manager"],
     )
     #启动控制器
-    spawn_controllers = RegisterEventHandler(   
+    spawn_joint_state = RegisterEventHandler(
         OnProcessExit(
             target_action=gz_spawn_entity,
-            on_exit=[
-                joint_state_publisher ,
-                imu_sensor_broadcaster,
-                quadruped_robot_controller
-            ],
+            on_exit=[joint_state_publisher],
         )
     )
+
+    spawn_imu = RegisterEventHandler(
+        OnProcessExit(
+            target_action=joint_state_publisher,
+            on_exit=[imu_sensor_broadcaster],
+        )
+    )
+
+    spawn_quadruped = RegisterEventHandler(
+        OnProcessExit(
+            target_action=imu_sensor_broadcaster,
+            on_exit=[quadruped_robot_controller],
+        )
+    )
+    # spawn_controllers = RegisterEventHandler(   
+    #     OnProcessExit(
+    #         target_action=gz_spawn_entity,
+    #         on_exit=[
+    #             joint_state_publisher ,
+    #             imu_sensor_broadcaster,
+    #             quadruped_robot_controller
+    #         ],
+    #     )
+    # )
     delayed_gazebo = TimerAction(
         period=1.0,
         actions=[gz_sim, gz_spawn_entity]
@@ -125,7 +153,10 @@ def launch_setup(context, *args, **kwargs):
             delayed_gazebo,
             # gz_sim,
             # gz_spawn_entity, 
-            spawn_controllers
+            # spawn_controllers
+            spawn_joint_state,
+            spawn_imu,
+            spawn_quadruped,
             ]
 
 

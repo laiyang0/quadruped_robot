@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(masscenter_des)
+project(reference_trajectory_generator)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -14,23 +14,23 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 set(SOURCES
-  src/masscenter_des.cpp
+  src/reference_trajectory_generator.cpp
 )
-add_executable(masscenter_des ${SOURCES})
+add_executable(reference_trajectory_generator ${SOURCES})
 
-target_include_directories(masscenter_des
+target_include_directories(reference_trajectory_generator
         PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 
 ament_target_dependencies(
-        masscenter_des PUBLIC 
+        reference_trajectory_generator PUBLIC 
         rclcpp
         std_msgs
         nav_msgs
         Eigen3
 )
-install(TARGETS masscenter_des
+install(TARGETS reference_trajectory_generator
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

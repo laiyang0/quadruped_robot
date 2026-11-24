@@ -518,27 +518,71 @@ namespace gz_quadruped_hardware
             });
 
         // Foot Force torque sensor
+        // this->dataPtr->ecm->Each<sim::components::ForceTorque,
+        //                          sim::components::Name>(
+        //     [&](const sim::Entity& _entity,
+        //         const sim::components::ForceTorque*,
+        //         const sim::components::Name* _name) -> bool
+        //     {
+        //         auto ftData = std::make_shared<ForceTorqueData>();
+        //         RCLCPP_INFO_STREAM(this->nh_->get_logger(), "Loading Foot Force sensor: " << _name->Data());
+
+        //         auto sensorTopicComp = this->dataPtr->ecm->Component<
+        //             sim::components::SensorTopic>(_entity);
+        //         if (sensorTopicComp)
+        //         {
+        //             RCLCPP_INFO_STREAM(this->nh_->get_logger(), "Topic name: " << sensorTopicComp->Data());
+        //         }
+        //         ftData->name = _name->Data();
+        //         ftData->sim_ft_sensors_ = _entity;
+        //         this->dataPtr->state_interfaces_.emplace_back(
+        //                 "foot_force",
+        //                 ftData->name,
+        //                 &ftData->foot_effort);
+        //         this->dataPtr->ft_sensors_.push_back(ftData);
+        //         return true;
+        //     });
         this->dataPtr->ecm->Each<sim::components::ForceTorque,
-                                 sim::components::Name>(
+                                sim::components::Name>(
             [&](const sim::Entity& _entity,
                 const sim::components::ForceTorque*,
                 const sim::components::Name* _name) -> bool
             {
                 auto ftData = std::make_shared<ForceTorqueData>();
-                RCLCPP_INFO_STREAM(this->nh_->get_logger(), "Loading Foot Force sensor: " << _name->Data());
 
-                auto sensorTopicComp = this->dataPtr->ecm->Component<
-                    sim::components::SensorTopic>(_entity);
-                if (sensorTopicComp)
-                {
-                    RCLCPP_INFO_STREAM(this->nh_->get_logger(), "Topic name: " << sensorTopicComp->Data());
-                }
-                ftData->name = _name->Data();
+                std::string sensor_name = _name->Data();
+                RCLCPP_INFO_STREAM(this->nh_->get_logger(),
+                    "Loading Foot Force sensor: " << sensor_name);
+
+                ftData->name = sensor_name;
                 ftData->sim_ft_sensors_ = _entity;
-                this->dataPtr->state_interfaces_.emplace_back(
-                        "foot_force",
-                        ftData->name,
-                        &ftData->foot_effort);
+
+                // ============================================================
+                // 修正：sensor_name 就是 URDF 里的名字（FL_foot / FR_foot / ...）
+                // 直接用它作为 interface_prefix
+                // ============================================================
+                std::string interface_prefix = sensor_name;  // "FL_foot" / "FR_foot" / ...
+                size_t pos = interface_prefix.find("_force");
+                if (pos != std::string::npos) {
+                    interface_prefix = interface_prefix.substr(0, pos);
+                }
+
+                std::vector<std::string> interfaces = {"force_x", "force_y", "force_z"};
+
+                for (size_t i = 0; i < interfaces.size(); ++i) {
+                    // 注册名 = "FL_foot/force_x"
+                    std::string full_interface_name = interface_prefix + "/" + interfaces[i];
+
+                    RCLCPP_INFO_STREAM(this->nh_->get_logger(),
+                        "\t\t Registering interface: " << full_interface_name);
+
+                    this->dataPtr->state_interfaces_.emplace_back(
+                        interface_prefix,           // "FL_foot"
+                        interfaces[i],              // "force_x"  ← 注意：第二个参数只放接口名本身
+                        &ftData->ft_sensor_data_[i]
+                    );
+                }
+
                 this->dataPtr->ft_sensors_.push_back(ftData);
                 return true;
             });

@@ -30,11 +30,13 @@ add_library(${PROJECT_NAME} SHARED
         src/quadruped_robot_controller.cpp
         src/robot_leg.cpp
         src/FSM/StateFixedStand.cpp
+        src/estimator/KalmanFilterEstimator.cpp
 )
 target_include_directories(${PROJECT_NAME}
         PUBLIC
         include/quadruped_robot_controller              #添加工程的内部包含目录
         include/quadruped_robot_controller/FSM
+        include/quadruped_robot_controller/estimator
         ${EIGEN3_INCLUDE_DIR}                           #添加eigen3的路径  /usr/include/eigen3
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
